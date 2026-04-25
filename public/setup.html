@@ -1,0 +1,463 @@
+<!doctype html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Safe Setup</title>
+    <style>
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+          Arial, sans-serif;
+        padding: 20px;
+        background: #f4f4f9;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 90vh;
+        margin: 0;
+      }
+      .box {
+        background: white;
+        padding: 30px;
+        border-radius: 20px;
+        max-width: 400px;
+        width: 100%;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        box-sizing: border-box;
+      }
+      h2 {
+        text-align: center;
+        color: #333;
+        margin-top: 0;
+        margin-bottom: 25px;
+      }
+      label {
+        font-weight: bold;
+        color: #555;
+        font-size: 14px;
+        margin-left: 10px;
+        display: block;
+      }
+
+      /* --- STATE VISIBILITY --- */
+      /* Everything is hidden by default EXCEPT the loading state */
+      #mainState {
+        display: none;
+      }
+      #errorState {
+        display: none;
+      }
+      #loadingState {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 30px 0;
+        text-align: center;
+      }
+
+      /* Sleek CSS Spinner */
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #007bff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 15px;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      .loading-text {
+        color: #666;
+        font-weight: bold;
+      }
+      /* ------------------------ */
+
+      .id-section {
+        background: #fff8e1;
+        padding: 15px;
+        border-radius: 15px;
+        margin-bottom: 25px;
+        border: 1px solid #ffe082;
+      }
+      .warning-text {
+        color: #d32f2f;
+        font-size: 13px;
+        font-weight: bold;
+        display: block;
+        margin-bottom: 8px;
+        text-align: center;
+      }
+      .id-flex {
+        display: flex;
+        gap: 10px;
+      }
+      .id-input {
+        background: #f5f5f5;
+        color: #666;
+        font-family: monospace;
+        letter-spacing: 1px;
+        font-weight: bold;
+      }
+      .download-btn {
+        width: 50px;
+        padding: 0;
+        margin: 8px 0 20px 0;
+        background: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 15px;
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transition: background 0.2s;
+      }
+      .download-btn:hover {
+        background: #388e3c;
+      }
+      .download-btn:disabled {
+        background: #a5d6a7;
+        cursor: not-allowed;
+      }
+
+      .error-icon {
+        color: #d32f2f;
+        margin-bottom: 15px;
+      }
+      .error-msg {
+        color: #555;
+        line-height: 1.5;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+
+      input {
+        width: 100%;
+        padding: 12px 18px;
+        margin: 8px 0 20px 0;
+        box-sizing: border-box;
+        border: 1px solid #ccc;
+        border-radius: 25px;
+        font-size: 16px;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      input:focus {
+        border-color: #007bff;
+      }
+
+      .password-wrapper {
+        position: relative;
+        width: 100%;
+        margin: 8px 0 20px 0;
+      }
+      .password-wrapper input {
+        margin: 0;
+        padding-right: 45px;
+      }
+      .eye-btn {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        padding: 0;
+        margin: 0;
+        color: #666;
+        cursor: pointer;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .eye-btn:hover {
+        color: #333;
+      }
+
+      .submit-btn {
+        width: 100%;
+        padding: 15px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 25px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold;
+        margin-top: 10px;
+        transition: background-color 0.2s;
+      }
+      .submit-btn:hover {
+        background: #0056b3;
+      }
+      .submit-btn:disabled {
+        background: #99c2ff;
+        cursor: not-allowed;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="box">
+      <div id="loadingState">
+        <div class="spinner"></div>
+        <div class="loading-text">Communicating with hardware...</div>
+      </div>
+
+      <div id="errorState">
+        <div style="width: 100%; display: flex; justify-content: center">
+          <svg
+            class="error-icon"
+            viewBox="0 0 24 24"
+            width="48"
+            height="48"
+            stroke="currentColor"
+            stroke-width="2"
+            fill="none"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+        </div>
+
+        <h2 style="color: #d32f2f; margin-bottom: 10px">Hardware Error</h2>
+
+        <p class="error-msg">
+          Something went wrong while fetching your Device ID. <br /><br />
+          Please restart your device and try again later.
+        </p>
+        <button class="submit-btn" onclick="window.location.reload()">
+          Reload Page
+        </button>
+      </div>
+
+      <div id="mainState">
+        <h2>SafeDrawer Configuration</h2>
+
+        <div class="id-section">
+          <span class="warning-text"
+            >⚠️ Mark this Device ID down or download the file! You will need it
+            to claim your safe.</span
+          >
+          <div class="id-flex">
+            <input
+              type="text"
+              id="deviceIdDisplay"
+              class="id-input"
+              value="Fetching..."
+              readonly
+            />
+            <button
+              type="button"
+              id="downloadIdBtn"
+              class="download-btn"
+              aria-label="Download Configuration"
+              disabled
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="20"
+                height="20"
+                stroke="currentColor"
+                stroke-width="2"
+                fill="none"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <form id="setupForm">
+          <label>Drawer Name</label>
+          <input
+            type="text"
+            id="drawerName"
+            placeholder="e.g., Office Safe"
+            required
+          />
+
+          <label>Home Wi-Fi Name (SSID)</label>
+          <input type="text" id="ssid" placeholder="Network Name" required />
+
+          <label>Wi-Fi Password</label>
+          <div class="password-wrapper">
+            <input
+              type="password"
+              id="password"
+              placeholder="Password"
+              required
+            />
+            <button
+              type="button"
+              id="togglePassword"
+              class="eye-btn"
+              aria-label="Toggle password visibility"
+            >
+              <svg
+                id="eyeIcon"
+                viewBox="0 0 24 24"
+                width="20"
+                height="20"
+                stroke="currentColor"
+                stroke-width="2"
+                fill="none"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
+
+          <label>Location (Optional)</label>
+          <input type="text" id="location" placeholder="e.g., Master Bedroom" />
+
+          <button type="submit" class="submit-btn">Connect to Wi-Fi</button>
+        </form>
+      </div>
+    </div>
+
+    <script src="/scripts/jsencrypt.min.js"></script>
+
+    <script>
+      let cachedDeviceId = null;
+
+      // Ensure DOM is fully loaded, then start hardware check
+      window.addEventListener("DOMContentLoaded", async () => {
+        const loadingState = document.getElementById("loadingState");
+        const mainState = document.getElementById("mainState");
+        const errorState = document.getElementById("errorState");
+
+        try {
+          const res = await fetch("/api/device-info");
+          if (!res.ok) throw new Error("Failed to fetch");
+
+          const data = await res.json();
+          cachedDeviceId = data.serialNumber;
+
+          if (!cachedDeviceId || cachedDeviceId === "UNKNOWN-ID") {
+            throw new Error("Invalid ID returned");
+          }
+
+          // SUCCESS: Setup UI and swap states
+          document.getElementById("deviceIdDisplay").value = cachedDeviceId;
+          document.getElementById("downloadIdBtn").disabled = false;
+
+          loadingState.style.display = "none";
+          mainState.style.display = "block";
+        } catch (err) {
+          // FAIL: Hide loading, show error
+          loadingState.style.display = "none";
+          errorState.style.display = "block";
+        }
+      });
+
+      // Generate and download JSON file
+      document.getElementById("downloadIdBtn").addEventListener("click", () => {
+        if (!cachedDeviceId) return;
+
+        const jsonData = JSON.stringify({ deviceId: cachedDeviceId }, null, 2);
+        const blob = new Blob([jsonData], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `SafeDrawer_${cachedDeviceId}.json`;
+        document.body.appendChild(a);
+        a.click();
+
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
+
+      // PASSWORD TOGGLE LOGIC
+      const togglePassword = document.getElementById("togglePassword");
+      const password = document.getElementById("password");
+      const eyeIcon = document.getElementById("eyeIcon");
+
+      togglePassword.addEventListener("click", function () {
+        const type =
+          password.getAttribute("type") === "password" ? "text" : "password";
+        password.setAttribute("type", type);
+
+        if (type === "text") {
+          eyeIcon.innerHTML =
+            '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+        } else {
+          eyeIcon.innerHTML =
+            '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
+        }
+      });
+
+      // SECURE FORM SUBMIT LOGIC
+      document
+        .getElementById("setupForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const btn = document.querySelector(".submit-btn");
+          btn.innerText = "Encrypting data...";
+          btn.disabled = true;
+
+          const rawPassword = document.getElementById("password").value;
+
+          try {
+            const keyResponse = await fetch("/api/public-key");
+            const keyData = await keyResponse.json();
+
+            const encryptor = new JSEncrypt();
+            encryptor.setPublicKey(keyData.publicKey);
+
+            const scrambledPassword = encryptor.encrypt(rawPassword);
+
+            if (!scrambledPassword) throw new Error("Encryption failed");
+
+            const data = {
+              drawerName: document.getElementById("drawerName").value,
+              ssid: document.getElementById("ssid").value,
+              password: scrambledPassword,
+              location: document.getElementById("location").value,
+            };
+
+            btn.innerText = "Connecting... Please wait.";
+
+            const response = await fetch("/api/setup-wifi", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(data),
+            });
+
+            if (response.ok) {
+              btn.innerText = "Success! Closing Hotspot...";
+              btn.style.background = "#28a745";
+            } else {
+              btn.innerText = "Try Again";
+              btn.disabled = false;
+            }
+          } catch (err) {
+            console.error(err);
+            alert("Security error or connection failed. Please try again.");
+            btn.disabled = false;
+            btn.innerText = "Try Again";
+          }
+        });
+    </script>
+  </body>
+</html>
