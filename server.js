@@ -11,6 +11,7 @@ app.use(express.json());
 app.use(express.static("public"));
 
 // --- Encryption & DB ---
+// (This only encrypts the password before saving it to your local database)
 function encrypt(text) {
   const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv(
@@ -32,10 +33,8 @@ function getDeviceID() {
     const match = cpuInfo.match(/Serial\s*:\s*([0-9a-f]{16})/i);
 
     if (match && match[1]) {
-      return match[1]; // Returns a string like: 100000001a2b3c4d
+      return match[1];
     }
-
-    // Fallback for non-Pi environments (like testing on your Windows/Mac PC)
     return "DEV-TEST-8899";
   } catch (err) {
     console.error("Could not read hardware serial:", err);
@@ -55,6 +54,7 @@ const Drawer = mongoose.model(
     raspberryPiId: String,
     ssid: String,
     password: String,
+    location: String, // Added location to match your frontend
   }),
 );
 
@@ -69,30 +69,39 @@ app.get("/api/device-info", (req, res) => {
 
 // --- Setup API (Must be before the wildcard!) ---
 app.post("/api/setup-wifi", async (req, res) => {
-  const { drawerName, raspberryPiId, ssid, password } = req.body;
+  const { drawerName, raspberryPiId, ssid, password, location } = req.body;
 
   // 1. Save to DB (Optional for testing)
   // try {
-  //     await new Drawer({ drawerName, raspberryPiId, ssid, password: encrypt(password) }).save();
-  //   } catch(e) { console.log("DB save skipped"); }
+  //     await new Drawer({ drawerName, raspberryPiId, ssid, password: encrypt(password), location }).save();
+  // } catch(e) { console.log("DB save skipped"); }
 
-  // 2. Connect to Wi-Fi
-  exec(
-    `sudo nmcli device wifi connect "${ssid}" password "${password}"`,
-    (err) => {
-      if (err) return res.status(500).json({ error: "Wi-Fi Failed" });
-      res.json({ success: true });
-      // 3. Kill the hotspot 3 seconds later
-      setTimeout(
-        () => exec("sudo nmcli connection down SafeDrawer_Setup"),
-        3000,
-      );
-    },
-  );
+  // 2. IMMEDIATELY send success to the phone so the UI button turns green
+  res.json({ success: true });
+
+  // 3. Connect to Wi-Fi in the background after a 3-second delay
+  setTimeout(() => {
+    console.log(`Attempting to connect to ${ssid}...`);
+    exec(
+      `sudo nmcli device wifi connect "${ssid}" password "${password}"`,
+      (err) => {
+        if (err) {
+          console.log("Wi-Fi Connection Failed.");
+        } else {
+          console.log("Connected successfully! Killing the hotspot...");
+          // Kill the hotspot 2 seconds after successful connection
+          setTimeout(
+            () => exec("sudo nmcli connection down SafeDrawer_Setup"),
+            2000,
+          );
+        }
+      },
+    );
+  }, 3000);
 });
 
 // --- Captive Portal Trap ---
-// This intercepts Apple/Android network checks and serves  HTML!
+// This intercepts Apple/Android network checks and serves HTML!
 app.get("/{*splat}", (req, res) => {
   res.sendFile(path.join(__dirname, "/public/setup.html"));
 });

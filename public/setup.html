@@ -40,7 +40,6 @@
       }
 
       /* --- STATE VISIBILITY --- */
-      /* Everything is hidden by default EXCEPT the loading state */
       #mainState {
         display: none;
       }
@@ -56,7 +55,6 @@
         text-align: center;
       }
 
-      /* Sleek CSS Spinner */
       .spinner {
         width: 40px;
         height: 40px;
@@ -78,7 +76,6 @@
         color: #666;
         font-weight: bold;
       }
-      /* ------------------------ */
 
       .id-section {
         background: #fff8e1;
@@ -231,12 +228,10 @@
             <line x1="12" y1="16" x2="12.01" y2="16"></line>
           </svg>
         </div>
-
         <h2 style="color: #d32f2f; margin-bottom: 10px">Hardware Error</h2>
-
         <p class="error-msg">
-          Something went wrong while fetching your Device ID. <br /><br />
-          Please restart your device and try again later.
+          Something went wrong while fetching your Device ID. <br /><br />Please
+          restart your device and try again later.
         </p>
         <button class="submit-btn" onclick="window.location.reload()">
           Reload Page
@@ -245,7 +240,6 @@
 
       <div id="mainState">
         <h2>SafeDrawer Configuration</h2>
-
         <div class="id-section">
           <span class="warning-text"
             >⚠️ Mark this Device ID down or download the file! You will need it
@@ -335,12 +329,10 @@
       </div>
     </div>
 
-    <script src="/scripts/jsencrypt.min.js"></script>
-
     <script>
       let cachedDeviceId = null;
 
-      // Ensure DOM is fully loaded, then start hardware check
+      // 1. Hardware Check
       window.addEventListener("DOMContentLoaded", async () => {
         const loadingState = document.getElementById("loadingState");
         const mainState = document.getElementById("mainState");
@@ -357,20 +349,18 @@
             throw new Error("Invalid ID returned");
           }
 
-          // SUCCESS: Setup UI and swap states
           document.getElementById("deviceIdDisplay").value = cachedDeviceId;
           document.getElementById("downloadIdBtn").disabled = false;
 
           loadingState.style.display = "none";
           mainState.style.display = "block";
         } catch (err) {
-          // FAIL: Hide loading, show error
           loadingState.style.display = "none";
           errorState.style.display = "block";
         }
       });
 
-      // Generate and download JSON file
+      // 2. Download Button
       document.getElementById("downloadIdBtn").addEventListener("click", () => {
         if (!cachedDeviceId) return;
 
@@ -388,7 +378,7 @@
         URL.revokeObjectURL(url);
       });
 
-      // PASSWORD TOGGLE LOGIC
+      // 3. Password Eye Toggle
       const togglePassword = document.getElementById("togglePassword");
       const password = document.getElementById("password");
       const eyeIcon = document.getElementById("eyeIcon");
@@ -407,37 +397,23 @@
         }
       });
 
-      // SECURE FORM SUBMIT LOGIC
+      // 4. Simple Form Submit
       document
         .getElementById("setupForm")
         .addEventListener("submit", async (e) => {
           e.preventDefault();
           const btn = document.querySelector(".submit-btn");
-          btn.innerText = "Encrypting data...";
+          btn.innerText = "Connecting... Please wait.";
           btn.disabled = true;
 
-          const rawPassword = document.getElementById("password").value;
+          const data = {
+            drawerName: document.getElementById("drawerName").value,
+            ssid: document.getElementById("ssid").value,
+            password: document.getElementById("password").value, // Sent as plain text
+            location: document.getElementById("location").value,
+          };
 
           try {
-            const keyResponse = await fetch("/api/public-key");
-            const keyData = await keyResponse.json();
-
-            const encryptor = new JSEncrypt();
-            encryptor.setPublicKey(keyData.publicKey);
-
-            const scrambledPassword = encryptor.encrypt(rawPassword);
-
-            if (!scrambledPassword) throw new Error("Encryption failed");
-
-            const data = {
-              drawerName: document.getElementById("drawerName").value,
-              ssid: document.getElementById("ssid").value,
-              password: scrambledPassword,
-              location: document.getElementById("location").value,
-            };
-
-            btn.innerText = "Connecting... Please wait.";
-
             const response = await fetch("/api/setup-wifi", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -453,7 +429,7 @@
             }
           } catch (err) {
             console.error(err);
-            alert("Security error or connection failed. Please try again.");
+            alert("Error connecting to the SafeDrawer. Please try again.");
             btn.disabled = false;
             btn.innerText = "Try Again";
           }
